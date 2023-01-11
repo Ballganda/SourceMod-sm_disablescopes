@@ -1,0 +1,37 @@
+//bit of code from abner duel
+//collect some other scope disable optionns to 
+public Action CommandSemMira(int client, int args)
+{
+	if (NoScopeEnabled)
+	{
+		NoScopeEnabled = false;
+		CPrintToChatAll("{green}%t\x01%t", "prefix", "Scope On");
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (IsValidClient(i) && IsPlayerAlive(i))
+			{
+				for (int j = 0; j < 5; j++)
+				{
+					int weapon = GetPlayerWeaponSlot(i, j);
+					if (weapon == -1)
+					{
+						continue;
+					}
+					char item[128];
+					GetEdictClassname(weapon, item, sizeof(item));
+					if (isNoScopeWeapon(item))
+					{
+						SetEntDataFloat(weapon, m_flNextSecondaryAttack, 0.0);
+					}
+				}
+			}
+		}
+		return Plugin_Handled;
+	}
+	else
+	{
+		NoScopeEnabled = true;
+		CPrintToChatAll("{green}%t\x01%t", "prefix", "Scope Off");
+		return Plugin_Handled;
+	}
+}
