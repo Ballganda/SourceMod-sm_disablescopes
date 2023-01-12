@@ -26,13 +26,14 @@ ConVar g_cvDisableScopeAwp = null;
 ConVar g_cvDisableScopeScout = null;
 ConVar g_cvDisableScopeAutoSnipers = null;
 ConVar g_cvDisableScopeWeakSnipers = null;
-ConVar g_cvDisableInAirOnly = null;
+ConVar g_cvDisableInAir = null;
+ConVar g_cvDisableOnGround = null;
 
-public OnPluginStart()
+public void OnPluginStart()
 {
 	CheckGameVersion();
 
-	RegAdminCmd("sm_disablescope", About, ADMFLAG_BAN, "sm_disablescope info in console");
+	//RegAdminCmd("sm_disablescope", About, ADMFLAG_BAN, "sm_disablescope info in console");
 
 	CreateConVar("sm_disablescope_version", PLUGIN_VERSION, "Disable Scopes", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
@@ -47,7 +48,7 @@ public OnPluginStart()
 	//will create a file named cfg/sourcemod/<sm_pluginname>.cfg
 	AutoExecConfig(true, "sm_disablescope");
 
-	for(new i = 1; i <= MaxClients; i++)
+	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientValid(i))
 		{
@@ -61,9 +62,9 @@ public void OnClientPutInServer(int client)
 	SDKHook(client, SDKHook_PreThink, OnPreThink);
 }
 
-public Action OnPreThink(client)
+public Action OnPreThink(int client)
 {
-	if(!g_cvEnablePlugin.BoolValue))
+	if(!g_cvEnablePlugin.BoolValue)
 	{
 		return Plugin_Handled;
 	}
@@ -78,7 +79,7 @@ public Action OnPreThink(client)
 	return Plugin_Continue;
 }
 
-stock DisableScope(client, entitynumber)
+stock void DisableScope(int client, int entitynumber)
 {
 	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
@@ -90,7 +91,7 @@ stock DisableScope(client, entitynumber)
 			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
 		}
 		
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0.0);
 	}
 	else if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
 	{
@@ -102,11 +103,11 @@ stock DisableScope(client, entitynumber)
 			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
 		}
 		
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0.0);
 	}
 	else
 	{
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0.0);
 	}
 }
 
@@ -173,7 +174,7 @@ stock bool IsClientValid(int client)
 	return false;
 }
 
-public void About()
+public void About(int client)
 {
 	PrintToConsole(client, "");
 	PrintToConsole(client, "Plugin Name.......: %s", NAME);
