@@ -1,17 +1,15 @@
 #include <sourcemod>
 #include <sdkhooks>
-#include <sdktools>
+//#include <sdktools>
 
 #pragma semicolon 1
 #pragma newdecls required
-
-#define m_flNextSecondaryAttack FindSendPropInfo("CBaseCombatWeapon", "m_flNextSecondaryAttack")
 
 #define NAME "[CS:S]sm_disablescope"
 #define AUTHOR "abnerfs,Bara, Neuro Toxin, BallGanda"
 #define DESCRIPTION "sm_disablescope of selected weapons & limit air or ground use"
 #define PLUGIN_VERSION "0.0.b1"
-#define URL "https://github.com/Ballganda/SourceMod-sm_give"
+#define URL "https://github.com/Ballganda/SourceMod-sm_disablescopes"
 
 public Plugin myinfo = {
 	name = NAME,
@@ -29,6 +27,8 @@ ConVar g_cvDisableScopeWeakSnipers = null;
 ConVar g_cvDisableInAir = null;
 ConVar g_cvDisableOnGround = null;
 
+int m_flNextSecondaryAttack = -1;
+
 public void OnPluginStart()
 {
 	CheckGameVersion();
@@ -43,10 +43,12 @@ public void OnPluginStart()
 	g_cvDisableScopeAutoSnipers = CreateConVar("sm_disablescope_autosnipers", "1", "Disable the auto snipers scope <1|0>");
 	g_cvDisableScopeWeakSnipers = CreateConVar("sm_disablescope_weaksnipers", "1", "Disable the weak snipers scope <1|0>");
 	g_cvDisableInAir = CreateConVar("sm_disablescope_inair", "0", "Disable Scope when the player is jumping/off ground <1|0>");
-	g_cvDisableOnGround = CreateConVar("sm_disablescope_onground", "1", "Disable Scope when the player is on ground <1|0>");
+	g_cvDisableOnGround = CreateConVar("sm_disablescope_onground", "0", "Disable Scope when the player is on ground <1|0>");
 	
 	//will create a file named cfg/sourcemod/<sm_pluginname>.cfg
 	AutoExecConfig(true, "sm_disablescope");
+	
+	m_flNextSecondaryAttack = FindSendPropInfo("CBaseCombatWeapon", "m_flNextSecondaryAttack");
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -69,20 +71,35 @@ public Action OnPreThink(int client)
 		return Plugin_Handled;
 	}
 	
-	int iWeapon;
-	iWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	int ActiveWeapon;
+	ActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 	
-	if(IsNoScopeWeapon(iWeapon))
+	if(IsNoScopeWeapon(ActiveWeapon))
 	{
-		DisableScope(client, iWeapon);
+		DisableScope(client, ActiveWeapon);
 	}
 	return Plugin_Continue;
 }
 
 stock void DisableScope(int client, int entitynumber)
 {
+	if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
+	{
+		PrintToChatAll("\x10on ground");
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 9999.9);
+		if (GetEntProp(client, Prop_Send, "m_bIsScoped"))
+		{
+			SetEntProp(entitynumber, Prop_Send, "m_zoomLevel", 0);
+			SetEntProp(client, Prop_Send, "m_iFOV", 90);
+			SetEntProp(client, Prop_Send, "m_bIsScoped", 0);
+			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
+		}
+	}
+	
 	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
+		PrintToChatAll("\x10jumping");
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 9999.9);
 		if (GetEntProp(client, Prop_Send, "m_bIsScoped"))
 		{
 			SetEntProp(entitynumber, Prop_Send, "m_zoomLevel", 0);
@@ -90,34 +107,13 @@ stock void DisableScope(int client, int entitynumber)
 			SetEntProp(client, Prop_Send, "m_bIsScoped", 0);
 			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
 		}
-		
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0.0);
-	}
-	else if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
-	{
-		if (GetEntProp(client, Prop_Send, "m_bIsScoped"))
-		{
-			SetEntProp(entitynumber, Prop_Send, "m_zoomLevel", 0);
-			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-			SetEntProp(client, Prop_Send, "m_bIsScoped", 0);
-			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
-		}
-		
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0.0);
-	}
-	else
-	{
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, 0.0);
 	}
 }
 
 bool IsNoScopeWeapon(int entitynumber)
 {
 	char sCheckClassname[MAX_NAME_LENGTH];
-	if(!GetEdictClassname(entitynumber, sCheckClassname, sizeof(sCheckClassname)))
-	{
-		return false;
-	}
+	GetEdictClassname(entitynumber, sCheckClassname, sizeof(sCheckClassname));
 	
 	if(g_cvDisableScopeAwp.BoolValue)
 	{
@@ -165,9 +161,7 @@ public void CheckGameVersion()
 
 stock bool IsClientValid(int client)
 {
-	if(client > 0 
-		&& client <= MaxClients
-		&& IsClientInGame(client))
+	if(client > 0 && client <= MaxClients && IsClientInGame(client))
 	{
 		return true;
 	}
