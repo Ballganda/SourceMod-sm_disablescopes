@@ -83,10 +83,15 @@ public Action OnPreThink(int client)
 
 stock void DisableScope(int client, int entitynumber)
 {
+	if (!g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
+	{
+		SetEntDataFloat(weapon, m_flNextSecondaryAttack, GetGameTime() - 0.1);
+	}
+	
 	if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
 	{
 		PrintToChatAll("\x10on ground");
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 9999.9);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
 		Float fov = GetClientFOV(client);
     		if (fov < 90)
 		{
@@ -94,10 +99,15 @@ stock void DisableScope(int client, int entitynumber)
 		}
 	}
 	
+	if (!g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
+	{
+		SetEntDataFloat(weapon, m_flNextSecondaryAttack, GetGameTime() - 0.1);
+	}
+	
 	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
 		PrintToChatAll("\x10jumping");
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 9999.9);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
 		Float fov = GetClientFOV(client);
     		if (fov < 90)
 		{
