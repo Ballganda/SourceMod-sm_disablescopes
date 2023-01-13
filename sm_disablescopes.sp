@@ -87,12 +87,10 @@ stock void DisableScope(int client, int entitynumber)
 	{
 		PrintToChatAll("\x10on ground");
 		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 9999.9);
-		if (GetEntProp(client, Prop_Send, "m_bIsScoped"))
+		Float fov = GetClientFOV(client);
+    		if (fov < 90)
 		{
-			SetEntProp(entitynumber, Prop_Send, "m_zoomLevel", 0);
-			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-			SetEntProp(client, Prop_Send, "m_bIsScoped", 0);
-			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
+        		SetClientFOV(client, 90.0);
 		}
 	}
 	
@@ -100,12 +98,10 @@ stock void DisableScope(int client, int entitynumber)
 	{
 		PrintToChatAll("\x10jumping");
 		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 9999.9);
-		if (GetEntProp(client, Prop_Send, "m_bIsScoped"))
+		Float fov = GetClientFOV(client);
+    		if (fov < 90)
 		{
-			SetEntProp(entitynumber, Prop_Send, "m_zoomLevel", 0);
-			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-			SetEntProp(client, Prop_Send, "m_bIsScoped", 0);
-			SetEntProp(client, Prop_Send, "m_bResumeZoom", 0);
+        		SetClientFOV(client, 90.0);
 		}
 	}
 }
