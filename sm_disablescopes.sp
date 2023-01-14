@@ -85,33 +85,37 @@ stock void DisableScope(int client, int entitynumber)
 {
 	if (!g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
 	{
-		SetEntDataFloat(weapon, m_flNextSecondaryAttack, GetGameTime() - 0.1);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() - 0.01);
 	}
 	
 	if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
 	{
-		PrintToChatAll("\x10on ground");
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
-		Float fov = GetClientFOV(client);
-    		if (fov < 90)
+		//PrintToChatAll("\x10on ground");
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 100.0);
+		int fov;
+		GetEntProp(client, Prop_Send, "m_iFOV", fov);
+		if (fov < 90)
 		{
-        		SetClientFOV(client, 90.0);
+			SetEntProp(client, Prop_Send, "m_iFOV", 90);
+			//SetEntProp(client, Prop_Send, "m_iDefaultFOV", 90);
 		}
 	}
 	
 	if (!g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
-		SetEntDataFloat(weapon, m_flNextSecondaryAttack, GetGameTime() - 0.1);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() - 0.01);
 	}
 	
 	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
-		PrintToChatAll("\x10jumping");
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
-		Float fov = GetClientFOV(client);
-    		if (fov < 90)
+		//PrintToChatAll("\x10jumping");
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 100.0);
+		int fov;
+		GetEntProp(client, Prop_Send, "m_iFOV", fov);
+		if (fov < 90)
 		{
-        		SetClientFOV(client, 90.0);
+			SetEntProp(client, Prop_Send, "m_iFOV", 90);
+			//SetEntProp(client, Prop_Send, "m_iDefaultFOV", 90);
 		}
 	}
 }
