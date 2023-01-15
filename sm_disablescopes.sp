@@ -29,6 +29,8 @@ ConVar g_cvDisableOnGround = null;
 
 int m_flNextSecondaryAttack = -1;
 
+bool ScopeReset = false;
+
 public void OnPluginStart()
 {
 	CheckGameVersion();
@@ -83,39 +85,39 @@ public Action OnPreThink(int client)
 
 stock void DisableScope(int client, int entitynumber)
 {
-	if (!g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
+	if (ScopeReset && !g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
 	{
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() - 0.01);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() - 1.0);
+		ScopeReset = false;
 	}
 	
 	if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
 	{
-		//PrintToChatAll("\x10on ground");
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 100.0);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
+		ScopeReset = true;
 		int fov;
 		GetEntProp(client, Prop_Send, "m_iFOV", fov);
 		if (fov < 90)
 		{
 			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-			//SetEntProp(client, Prop_Send, "m_iDefaultFOV", 90);
 		}
 	}
 	
-	if (!g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
+	if (ScopeReset && !g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() - 0.01);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() - 1.0);
+		ScopeReset = false;
 	}
 	
 	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
-		//PrintToChatAll("\x10jumping");
-		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 100.0);
+		SetEntDataFloat(entitynumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
+		ScopeReset = true;
 		int fov;
 		GetEntProp(client, Prop_Send, "m_iFOV", fov);
 		if (fov < 90)
 		{
 			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-			//SetEntProp(client, Prop_Send, "m_iDefaultFOV", 90);
 		}
 	}
 }
