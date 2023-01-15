@@ -37,7 +37,7 @@ public void OnPluginStart()
 
 	//RegAdminCmd("sm_disablescope", About, ADMFLAG_BAN, "sm_disablescope info in console");
 
-	CreateConVar("sm_disablescope_version", PLUGIN_VERSION, "Disable Scopes", FCVAR_NOTIFY|FCVAR_DONTRECORD);
+	CreateConVar("sm_disablescope_version", PLUGIN_VERSION, NAME, FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
 	g_cvEnablePlugin = CreateConVar("sm_disablescope_enable", "1", "sm_disablescope_enable enables the plugin <1|0>");
 	g_cvDisableScopeAwp = CreateConVar("sm_disablescope_awp", "1", "Disable the AWP scope <1|0>");
