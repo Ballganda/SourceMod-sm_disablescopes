@@ -75,6 +75,10 @@ public Action OnPreThink(int client)
 	
 	int activeWeapon;
 	activeWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	if (!IsValidEntity(activeWeapon))
+	{
+		return Plugin_Continue;
+	}
 	
 	if(IsNoScopeWeapon(activeWeapon))
 	{
@@ -124,11 +128,6 @@ stock void DisableScope(int client, int entityNumber)
 
 bool IsNoScopeWeapon(int entityNumber)
 {
-	if (!IsValidEntity(entityNumber))
-	{
-		return false;
-	}
-	
 	char checkClassname[MAX_NAME_LENGTH];
 	GetEdictClassname(entityNumber, checkClassname, sizeof(checkClassname));
 	
