@@ -4,9 +4,9 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#define NAME "[CS:S]sm_disablescope"
+#define NAME "[CS:S]sm_disablescopes"
 #define AUTHOR "abnerfs, Bara, BallGanda"
-#define DESCRIPTION "sm_disablescope of selected weapons & limit air or ground use"
+#define DESCRIPTION "sm_disablescopes of selected weapons & limit air or ground use"
 #define PLUGIN_VERSION "0.0.b1"
 #define URL "https://github.com/Ballganda/SourceMod-sm_disablescopes"
 
@@ -35,19 +35,19 @@ public void OnPluginStart()
 {
 	CheckGameVersion();
 
-	RegAdminCmd("sm_disablescope", smAbout, ADMFLAG_BAN, "sm_disablescope info in console");
+	RegAdminCmd("sm_disablescopes", smAbout, ADMFLAG_BAN, "sm_disablescopes info in console");
 
-	CreateConVar("sm_disablescope_version", PLUGIN_VERSION, NAME, FCVAR_NOTIFY|FCVAR_DONTRECORD);
+	CreateConVar("sm_disablescopes_version", PLUGIN_VERSION, NAME, FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
-	g_cvEnablePlugin = CreateConVar("sm_disablescope_enable", "1", "sm_disablescope_enable enables the plugin <1|0>");
-	g_cvDisableScopeAwp = CreateConVar("sm_disablescope_awp", "1", "Disable the AWP scope <1|0>");
-	g_cvDisableScopeScout = CreateConVar("sm_disablescope_scout", "1", "Disable the scout scope <1|0>");
-	g_cvDisableScopeAutoSnipers = CreateConVar("sm_disablescope_autosnipers", "1", "Disable the auto snipers scope <1|0>");
-	g_cvDisableScopeWeakSnipers = CreateConVar("sm_disablescope_weaksnipers", "1", "Disable the weak snipers scope <1|0>");
-	g_cvDisableInAir = CreateConVar("sm_disablescope_inair", "1", "Disable Scope when the player is jumping/off ground <1|0>");
-	g_cvDisableOnGround = CreateConVar("sm_disablescope_onground", "0", "Disable Scope when the player is on ground <1|0>");
+	g_cvEnablePlugin = CreateConVar("sm_disablescopes_enable", "1", "sm_disablescopes_enable enables the plugin <1|0>");
+	g_cvDisableScopeAwp = CreateConVar("sm_disablescopes_awp", "1", "Disable the AWP scope <1|0>");
+	g_cvDisableScopeScout = CreateConVar("sm_disablescopes_scout", "1", "Disable the scout scope <1|0>");
+	g_cvDisableScopeAutoSnipers = CreateConVar("sm_disablescopes_autosnipers", "1", "Disable the auto snipers scope <1|0>");
+	g_cvDisableScopeWeakSnipers = CreateConVar("sm_disablescopes_weaksnipers", "1", "Disable the weak snipers scope <1|0>");
+	g_cvDisableInAir = CreateConVar("sm_disablescopes_inair", "1", "Disable Scope when the player is jumping/off ground <1|0>");
+	g_cvDisableOnGround = CreateConVar("sm_disablescopes_onground", "0", "Disable Scope when the player is on ground <1|0>");
 	
-	AutoExecConfig(true, "sm_disablescope");
+	AutoExecConfig(true, "sm_disablescopes");
 	
 	//Get the offset for m_flNextSecondaryAttack
 	m_flNextSecondaryAttack = FindSendPropInfo("CBaseCombatWeapon", "m_flNextSecondaryAttack");
@@ -124,6 +124,11 @@ stock void DisableScope(int client, int entityNumber)
 
 bool IsNoScopeWeapon(int entityNumber)
 {
+	if (!IsValidEntity(entityNumber))
+	{
+		return false;
+	}
+	
 	char checkClassname[MAX_NAME_LENGTH];
 	GetEdictClassname(entityNumber, checkClassname, sizeof(checkClassname));
 	
@@ -189,12 +194,12 @@ public Action smAbout(int client, int args)
 	PrintToConsole(client, "Plugin Version....: %s", PLUGIN_VERSION);
 	PrintToConsole(client, "Plugin URL........: %s", URL);
 	PrintToConsole(client, "List of cvars: ");
-	PrintToConsole(client, "sm_disablescope_enable");
-	PrintToConsole(client, "sm_disablescope_awp");
-	PrintToConsole(client, "sm_disablescope_scout");
-	PrintToConsole(client, "sm_disablescope_autosnipers");
-	PrintToConsole(client, "sm_disablescope_weaksnipers");
-	PrintToConsole(client, "sm_disablescope_inair");
-	PrintToConsole(client, "sm_disablescope_onground");
+	PrintToConsole(client, "sm_disablescopes_enable");
+	PrintToConsole(client, "sm_disablescopes_awp");
+	PrintToConsole(client, "sm_disablescopes_scout");
+	PrintToConsole(client, "sm_disablescopes_autosnipers");
+	PrintToConsole(client, "sm_disablescopes_weaksnipers");
+	PrintToConsole(client, "sm_disablescopes_inair");
+	PrintToConsole(client, "sm_disablescopes_onground");
 	return Plugin_Continue;
 }
