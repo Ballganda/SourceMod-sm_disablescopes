@@ -85,16 +85,16 @@ public Action OnPreThink(int client)
 stock void DisableScope(int client, int entityNumber)
 {
 	int IsOnGround = (GetEntityFlags(client) & FL_ONGROUND);
-	if (ScopeReset && !g_cvDisableOnGround.BoolValue && IsOnGround)
+	if (ScopeReset[client] && !g_cvDisableOnGround.BoolValue && IsOnGround)
 	{
 		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() - 1.0);
-		ScopeReset = false;
+		ScopeReset[client] = false;
 	}
 	
 	if (g_cvDisableOnGround.BoolValue && IsOnGround)
 	{
 		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 2.0);
-		ScopeReset = true;
+		ScopeReset[client] = true;
 		int fov;
 		GetEntProp(client, Prop_Send, "m_iFOV", fov);
 		if (fov < 90)
@@ -103,16 +103,16 @@ stock void DisableScope(int client, int entityNumber)
 		}
 	}
 	
-	if (ScopeReset && !g_cvDisableInAir.BoolValue && !IsOnGround)
+	if (ScopeReset[client] && !g_cvDisableInAir.BoolValue && !IsOnGround)
 	{
 		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() - 1.0);
-		ScopeReset = false;
+		ScopeReset[client] = false;
 	}
 	
 	if (g_cvDisableInAir.BoolValue && !IsOnGround)
 	{
 		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 2.0);
-		ScopeReset = true;
+		ScopeReset[client] = true;
 		int fov;
 		GetEntProp(client, Prop_Send, "m_iFOV", fov);
 		if (fov < 90)
