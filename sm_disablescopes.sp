@@ -7,7 +7,7 @@
 #define NAME "[CS:S]sm_disablescopes"
 #define AUTHOR "abnerfs, Bara, BallGanda"
 #define DESCRIPTION "sm_disablescopes of selected weapons & limit air or ground use"
-#define PLUGIN_VERSION "0.0.b1"
+#define PLUGIN_VERSION "0.0.b2"
 #define URL "https://github.com/Ballganda/SourceMod-sm_disablescopes"
 
 public Plugin myinfo = {
@@ -26,10 +26,7 @@ ConVar g_cvDisableScopeWeakSnipers = null;
 ConVar g_cvDisableInAir = null;
 ConVar g_cvDisableOnGround = null;
 
-// '\0' is null 
-int m_flNextSecondaryAttack = '\0';
-
-bool ScopeReset = false;
+bool ScopeReset[MAXPLAYERS + 1];
 
 public void OnPluginStart()
 {
@@ -48,9 +45,6 @@ public void OnPluginStart()
 	g_cvDisableOnGround = CreateConVar("sm_disablescopes_onground", "0", "Disable Scope when the player is on ground <1|0>");
 	
 	AutoExecConfig(true, "sm_disablescopes");
-	
-	//Get the offset for m_flNextSecondaryAttack
-	m_flNextSecondaryAttack = FindSendPropInfo("CBaseCombatWeapon", "m_flNextSecondaryAttack");
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -64,6 +58,7 @@ public void OnPluginStart()
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_PreThink, OnPreThink);
+	ScopeReset[client] = false;
 }
 
 public Action OnPreThink(int client)
@@ -89,15 +84,16 @@ public Action OnPreThink(int client)
 
 stock void DisableScope(int client, int entityNumber)
 {
-	if (ScopeReset && !g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
+	int IsOnGround = (GetEntityFlags(client) & FL_ONGROUND);
+	if (ScopeReset && !g_cvDisableOnGround.BoolValue && IsOnGround)
 	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() - 1.0);
+		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() - 1.0);
 		ScopeReset = false;
 	}
 	
-	if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
+	if (g_cvDisableOnGround.BoolValue && IsOnGround)
 	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
+		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 2.0);
 		ScopeReset = true;
 		int fov;
 		GetEntProp(client, Prop_Send, "m_iFOV", fov);
@@ -107,15 +103,15 @@ stock void DisableScope(int client, int entityNumber)
 		}
 	}
 	
-	if (ScopeReset && !g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
+	if (ScopeReset && !g_cvDisableInAir.BoolValue && !IsOnGround)
 	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() - 1.0);
+		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() - 1.0);
 		ScopeReset = false;
 	}
 	
-	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
+	if (g_cvDisableInAir.BoolValue && !IsOnGround)
 	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
+		SetEntPropFloat(entityNumber, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 2.0);
 		ScopeReset = true;
 		int fov;
 		GetEntProp(client, Prop_Send, "m_iFOV", fov);
@@ -193,12 +189,13 @@ public Action smAbout(int client, int args)
 	PrintToConsole(client, "Plugin Version....: %s", PLUGIN_VERSION);
 	PrintToConsole(client, "Plugin URL........: %s", URL);
 	PrintToConsole(client, "List of cvars: ");
-	PrintToConsole(client, "sm_disablescopes_enable");
-	PrintToConsole(client, "sm_disablescopes_awp");
-	PrintToConsole(client, "sm_disablescopes_scout");
-	PrintToConsole(client, "sm_disablescopes_autosnipers");
-	PrintToConsole(client, "sm_disablescopes_weaksnipers");
-	PrintToConsole(client, "sm_disablescopes_inair");
-	PrintToConsole(client, "sm_disablescopes_onground");
+	PrintToConsole(client, "sm_disablescopes_version");
+	PrintToConsole(client, "sm_disablescopes_enable <1|0>");
+	PrintToConsole(client, "sm_disablescopes_awp <1|0>");
+	PrintToConsole(client, "sm_disablescopes_scout <1|0>");
+	PrintToConsole(client, "sm_disablescopes_autosnipers <1|0>");
+	PrintToConsole(client, "sm_disablescopes_weaksnipers <1|0>");
+	PrintToConsole(client, "sm_disablescopes_inair <1|0>");
+	PrintToConsole(client, "sm_disablescopes_onground <1|0>");
 	return Plugin_Continue;
 }
