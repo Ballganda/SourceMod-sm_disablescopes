@@ -1,5 +1,5 @@
 #include <sourcemod>
-#include <sdkhooks>
+#include <sdktools>
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -7,16 +7,17 @@
 #define NAME "[CS:S]sm_disablescopes"
 #define AUTHOR "abnerfs, Bara, BallGanda"
 #define DESCRIPTION "sm_disablescopes of selected weapons & limit air or ground use"
-#define PLUGIN_VERSION "0.0.b1"
+#define PLUGIN_VERSION "0.0.b6"
 #define URL "https://github.com/Ballganda/SourceMod-sm_disablescopes"
+#define DS_PREFIX "[DisableScopes]"
 
 public Plugin myinfo = {
-	name = NAME,
-	author = AUTHOR,
-	description = DESCRIPTION,
-	version = PLUGIN_VERSION,
-	url = URL
-}
+    name = NAME,
+    author = AUTHOR,
+    description = DESCRIPTION,
+    version = PLUGIN_VERSION,
+    url = URL
+};
 
 ConVar g_cvEnablePlugin = null;
 ConVar g_cvDisableScopeAwp = null;
@@ -26,179 +27,230 @@ ConVar g_cvDisableScopeWeakSnipers = null;
 ConVar g_cvDisableInAir = null;
 ConVar g_cvDisableOnGround = null;
 
-// '\0' is null 
-int m_flNextSecondaryAttack = '\0';
-
-bool ScopeReset = false;
-
 public void OnPluginStart()
 {
-	CheckGameVersion();
+    CheckGameVersion();
 
-	RegAdminCmd("sm_disablescopes", smAbout, ADMFLAG_BAN, "sm_disablescopes info in console");
+    RegAdminCmd("sm_disablescopes", smAbout, ADMFLAG_BAN, "sm_disablescopes info in console");
 
-	CreateConVar("sm_disablescopes_version", PLUGIN_VERSION, NAME, FCVAR_NOTIFY|FCVAR_DONTRECORD);
-	
-	g_cvEnablePlugin = CreateConVar("sm_disablescopes_enable", "1", "sm_disablescopes_enable enables the plugin <1|0>");
-	g_cvDisableScopeAwp = CreateConVar("sm_disablescopes_awp", "1", "Disable the AWP scope <1|0>");
-	g_cvDisableScopeScout = CreateConVar("sm_disablescopes_scout", "1", "Disable the scout scope <1|0>");
-	g_cvDisableScopeAutoSnipers = CreateConVar("sm_disablescopes_autosnipers", "1", "Disable the auto snipers scope <1|0>");
-	g_cvDisableScopeWeakSnipers = CreateConVar("sm_disablescopes_weaksnipers", "1", "Disable the weak snipers scope <1|0>");
-	g_cvDisableInAir = CreateConVar("sm_disablescopes_inair", "1", "Disable Scope when the player is jumping/off ground <1|0>");
-	g_cvDisableOnGround = CreateConVar("sm_disablescopes_onground", "0", "Disable Scope when the player is on ground <1|0>");
-	
-	AutoExecConfig(true, "sm_disablescopes");
-	
-	//Get the offset for m_flNextSecondaryAttack
-	m_flNextSecondaryAttack = FindSendPropInfo("CBaseCombatWeapon", "m_flNextSecondaryAttack");
+    CreateConVar("sm_disablescopes_version", PLUGIN_VERSION, NAME, FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientValid(i))
-		{
-			OnClientPutInServer(i);
-		}
-	}
+    g_cvEnablePlugin = CreateConVar("sm_disablescopes_enable", "1", "sm_disablescopes_enable enables the plugin <1|0>");
+    g_cvDisableScopeAwp = CreateConVar("sm_disablescopes_awp", "1", "Disable the AWP scope <1|0>");
+    g_cvDisableScopeScout = CreateConVar("sm_disablescopes_scout", "1", "Disable the scout scope <1|0>");
+    g_cvDisableScopeAutoSnipers = CreateConVar("sm_disablescopes_autosnipers", "1", "Disable the auto snipers scope <1|0>");
+    g_cvDisableScopeWeakSnipers = CreateConVar("sm_disablescopes_weaksnipers", "1", "Disable the weak snipers scope <1|0>");
+    g_cvDisableInAir = CreateConVar("sm_disablescopes_inair", "1", "Disable Scope when the player is jumping/off ground <1|0>");
+    g_cvDisableOnGround = CreateConVar("sm_disablescopes_onground", "0", "Disable Scope when the player is on ground <1|0>");
+
+    static const char g_DefaultDisableScopesCfg[][] =
+    {
+        "// sm_disablescopes per-instance config",
+        "sm_disablescopes_enable 1",
+        "sm_disablescopes_awp 1",
+        "sm_disablescopes_scout 1",
+        "sm_disablescopes_autosnipers 1",
+        "sm_disablescopes_weaksnipers 1",
+        "sm_disablescopes_inair 1",
+        "sm_disablescopes_onground 0"
+    };
+
+    GeneratePerInstanceConfig(
+        "sm_disablescopes",
+        g_DefaultDisableScopesCfg,
+        sizeof(g_DefaultDisableScopesCfg)
+    );
 }
 
-public void OnClientPutInServer(int client)
+public void OnConfigsExecuted()
 {
-	SDKHook(client, SDKHook_PreThink, OnPreThink);
+    LoadInstanceConfig("sm_disablescopes");
 }
 
-public Action OnPreThink(int client)
+void GeneratePerInstanceConfig(const char[] cfgName, const char[][] defaultLines, int lineCount)
 {
-	if(!g_cvEnablePlugin.BoolValue)
-	{
-		return Plugin_Handled;
-	}
-	
-	int activeWeapon;
-	activeWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if (!IsValidEntity(activeWeapon))
-	{
-		return Plugin_Continue;
-	}
-	
-	if(IsNoScopeWeapon(activeWeapon))
-	{
-		DisableScope(client, activeWeapon);
-	}
-	return Plugin_Continue;
+    char cfgDir[PLATFORM_MAX_PATH];
+    char cfgPath[PLATFORM_MAX_PATH];
+
+    // addons/sourcemod/configs
+    BuildPath(Path_SM, cfgDir, sizeof(cfgDir), "configs");
+
+    // addons/sourcemod/configs/<cfgName>.cfg
+    Format(cfgPath, sizeof(cfgPath), "%s/%s.cfg", cfgDir, cfgName);
+
+    PrintToServer("%sCFG FILE: %s", DS_PREFIX, cfgPath);
+
+    // Only create if missing
+    if (!FileExists(cfgPath))
+    {
+        File f = OpenFile(cfgPath, "w");
+        if (f == null)
+        {
+            PrintToServer("%sFAILED to create config file", DS_PREFIX);
+            return;
+        }
+
+        for (int i = 0; i < lineCount; i++)
+        {
+            f.WriteLine(defaultLines[i]);
+        }
+
+        delete f;
+        PrintToServer("%sConfig file created", DS_PREFIX);
+    }
+    else
+    {
+        PrintToServer("%sConfig file already exists, not overwriting", DS_PREFIX);
+    }
 }
 
-stock void DisableScope(int client, int entityNumber)
+void LoadInstanceConfig(const char[] cfgName)
 {
-	if (ScopeReset && !g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
-	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() - 1.0);
-		ScopeReset = false;
-	}
-	
-	if (g_cvDisableOnGround.BoolValue && (GetEntityFlags(client) & FL_ONGROUND))
-	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
-		ScopeReset = true;
-		int fov;
-		GetEntProp(client, Prop_Send, "m_iFOV", fov);
-		if (fov < 90)
-		{
-			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-		}
-	}
-	
-	if (ScopeReset && !g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
-	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() - 1.0);
-		ScopeReset = false;
-	}
-	
-	if (g_cvDisableInAir.BoolValue && !(GetEntityFlags(client) & FL_ONGROUND))
-	{
-		SetEntDataFloat(entityNumber, m_flNextSecondaryAttack, GetGameTime() + 2.0);
-		ScopeReset = true;
-		int fov;
-		GetEntProp(client, Prop_Send, "m_iFOV", fov);
-		if (fov < 90)
-		{
-			SetEntProp(client, Prop_Send, "m_iFOV", 90);
-		}
-	}
+    char cfgPath[PLATFORM_MAX_PATH];
+    BuildPath(Path_SM, cfgPath, sizeof(cfgPath), "configs");
+    Format(cfgPath, sizeof(cfgPath), "%s/%s.cfg", cfgPath, cfgName);
+
+    File f = OpenFile(cfgPath, "r");
+    if (f == null)
+    {
+        PrintToServer("%sFailed to open instance config", DS_PREFIX);
+        return;
+    }
+
+    char line[256];
+    char cvar[64];
+    char value[64];
+
+    while (!f.EndOfFile() && f.ReadLine(line, sizeof(line)))
+    {
+        TrimString(line);
+
+        if (line[0] == ' ' || line[0] == '/')
+            continue;
+
+        int pos = BreakString(line, cvar, sizeof(cvar));
+        if (pos == -1)
+            continue;
+
+        strcopy(value, sizeof(value), line[pos]);
+        TrimString(value);
+
+        ConVar cv = FindConVar(cvar);
+        if (cv == null)
+        {
+            PrintToServer("%sUnknown cvar in config: %s", DS_PREFIX, cvar);
+            continue;
+        }
+
+        cv.SetString(value);
+    }
+
+    delete f;
+
+    PrintToServer("%sInstance config loaded", DS_PREFIX);
 }
 
 bool IsNoScopeWeapon(int entityNumber)
 {
-	char checkClassname[MAX_NAME_LENGTH];
-	GetEdictClassname(entityNumber, checkClassname, sizeof(checkClassname));
-	
-	if(g_cvDisableScopeAwp.BoolValue)
-	{
-		if(StrEqual(checkClassname, "weapon_awp"))
-		{
-			return true;
-		}
-	}
-	
-	if(g_cvDisableScopeScout.BoolValue)
-	{
-		if(StrEqual(checkClassname, "weapon_scout"))
-		{
-			return true;
-		}
-	}
+    char checkClassname[MAX_NAME_LENGTH];
+    GetEdictClassname(entityNumber, checkClassname, sizeof(checkClassname));
 
-	if(g_cvDisableScopeAutoSnipers.BoolValue)
-	{
-		if(StrEqual(checkClassname, "weapon_g3sg1")
-			|| StrEqual(checkClassname, "weapon_sg550"))
-		{
-			return true;
-		}
-	}
-	
-	if(g_cvDisableScopeWeakSnipers.BoolValue)
-	{
-		if(StrEqual(checkClassname, "weapon_sg552")
-			|| StrEqual(checkClassname, "weapon_aug"))
-		{
-			return true;
-		}
-	}
-	return false;
+    if (g_cvDisableScopeAwp.BoolValue && StrEqual(checkClassname, "weapon_awp"))
+        return true;
+
+    if (g_cvDisableScopeScout.BoolValue && StrEqual(checkClassname, "weapon_scout"))
+        return true;
+
+    if (g_cvDisableScopeAutoSnipers.BoolValue &&
+        (StrEqual(checkClassname, "weapon_g3sg1") || StrEqual(checkClassname, "weapon_sg550")))
+        return true;
+
+    if (g_cvDisableScopeWeakSnipers.BoolValue &&
+        (StrEqual(checkClassname, "weapon_sg552") || StrEqual(checkClassname, "weapon_aug")))
+        return true;
+
+    return false;
+}
+
+public Action OnPlayerRunCmd(
+    int client,
+    int &buttons,
+    int &impulse,
+    float vel[3],
+    float angles[3],
+    int &weapon,
+    int &subtype,
+    int &cmdnum,
+    int &tickcount,
+    int &seed,
+    int mouse[2]
+)
+{
+    if (!g_cvEnablePlugin.BoolValue || !IsClientInGame(client))
+        return Plugin_Continue;
+
+    int activeWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+    if (!IsValidEntity(activeWeapon))
+        return Plugin_Continue;
+
+    if (!IsNoScopeWeapon(activeWeapon))
+        return Plugin_Continue;
+
+    int flags = GetEntityFlags(client);
+    bool onGround = (flags & FL_ONGROUND) != 0;
+
+    bool blockScope = false;
+
+    // Determine whether scoping should be blocked
+    if (onGround && g_cvDisableOnGround.BoolValue)
+        blockScope = true;
+    else if (!onGround && g_cvDisableInAir.BoolValue)
+        blockScope = true;
+
+    if (!blockScope)
+        return Plugin_Continue;
+
+    // Strip secondary attack so player cannot re-scope
+    buttons &= ~IN_ATTACK2;
+
+    // Kill predicted scope window (high-ping fix)
+    SetEntPropFloat(activeWeapon, Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 0.2);
+
+    // Force unzoom if already scoped
+    int fov;
+    GetEntProp(client, Prop_Send, "m_iFOV", fov);
+    if (fov < 90)
+    {
+        SetEntProp(client, Prop_Send, "m_iFOV", 90);
+    }
+
+    return Plugin_Continue;
 }
 
 void CheckGameVersion()
 {
-	if(GetEngineVersion() != Engine_CSS)
-	{
-		SetFailState("Only CS:S Supported");
-	}
-}
-
-stock bool IsClientValid(int client)
-{
-	if(client > 0 && client <= MaxClients && IsClientInGame(client))
-	{
-		return true;
-	}
-	return false;
+    if (GetEngineVersion() != Engine_CSS)
+    {
+        SetFailState("Only CS:S Supported");
+    }
 }
 
 public Action smAbout(int client, int args)
 {
-	PrintToConsole(client, "");
-	PrintToConsole(client, "Plugin Name.......: %s", NAME);
-	PrintToConsole(client, "Plugin Author.....: %s", AUTHOR);
-	PrintToConsole(client, "Plugin Description: %s", DESCRIPTION);
-	PrintToConsole(client, "Plugin Version....: %s", PLUGIN_VERSION);
-	PrintToConsole(client, "Plugin URL........: %s", URL);
-	PrintToConsole(client, "List of cvars: ");
-	PrintToConsole(client, "sm_disablescopes_enable");
-	PrintToConsole(client, "sm_disablescopes_awp");
-	PrintToConsole(client, "sm_disablescopes_scout");
-	PrintToConsole(client, "sm_disablescopes_autosnipers");
-	PrintToConsole(client, "sm_disablescopes_weaksnipers");
-	PrintToConsole(client, "sm_disablescopes_inair");
-	PrintToConsole(client, "sm_disablescopes_onground");
-	return Plugin_Continue;
+    PrintToConsole(client, "");
+    PrintToConsole(client, "Plugin Name.......: %s", NAME);
+    PrintToConsole(client, "Plugin Author.....: %s", AUTHOR);
+    PrintToConsole(client, "Plugin Description: %s", DESCRIPTION);
+    PrintToConsole(client, "Plugin Version....: %s", PLUGIN_VERSION);
+    PrintToConsole(client, "Plugin URL........: %s", URL);
+    PrintToConsole(client, "List of cvars: ");
+    PrintToConsole(client, "sm_disablescopes_version");
+    PrintToConsole(client, "sm_disablescopes_enable <1|0>");
+    PrintToConsole(client, "sm_disablescopes_awp <1|0>");
+    PrintToConsole(client, "sm_disablescopes_scout <1|0>");
+    PrintToConsole(client, "sm_disablescopes_autosnipers <1|0>");
+    PrintToConsole(client, "sm_disablescopes_weaksnipers <1|0>");
+    PrintToConsole(client, "sm_disablescopes_inair <1|0>");
+    PrintToConsole(client, "sm_disablescopes_onground <1|0>");
+    return Plugin_Continue;
 }
