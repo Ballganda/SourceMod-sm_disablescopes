@@ -5,7 +5,7 @@
 #pragma newdecls required
 
 #define NAME "[CS:S]sm_disablescopes"
-#define AUTHOR "abnerfs, Bara, BallGanda"
+#define AUTHOR "BallGanda"
 #define DESCRIPTION "sm_disablescopes of selected weapons & limit air or ground use"
 #define PLUGIN_VERSION "0.0.b6"
 #define URL "https://github.com/Ballganda/SourceMod-sm_disablescopes"
